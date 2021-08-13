@@ -1,0 +1,90 @@
+<div class="page page-home col-sm-12">
+	<div class="page-breadcrumb">
+		<cmi-viaduc-breadcrumb [items]="crumbs"></cmi-viaduc-breadcrumb>
+	</div>
+	<div *ngIf="loading">
+		<cmi-blocker class="cmi-visible cmi-fixed cmi-center cmi-shadow">
+			<cmi-spinner [hint]="'Daten werden geholt...'"></cmi-spinner>
+		</cmi-blocker>
+	</div>
+	<cmi-viaduc-layout-left-content>
+		<div left>
+			<cmi-viaduc-left-navigation></cmi-viaduc-left-navigation>
+		</div>
+		<div *ngIf="!loading" content>
+			<h1 class="page-content-title">Aktuelle Abbyy Aktivitäten</h1>
+			<p>Es werden die aktuellen Aktivitäten der Processe <strong>Text-Extraktion</strong> und <strong>Transformation</strong>
+				angezeigt. <br/>
+				Falls notwendig können alle Einträge bereinigt werden. Dies sollte aber kaum je der Fall sein, da nach
+				einem Neustart des DocumentConverter-Services die Einträge automatisch entfernt werden.
+			</p>
+			<div class="row" *ngIf="progressTextExtraction.length > 0 || progressTransform.length > 0">
+				<div class="col-md-12">
+					<button class="btn btn-default" (click)="removeAll()">Bereinigen</button>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-6">
+					<h3>Text-Extraktion</h3>
+					<div *ngIf="progressTextExtraction.length === 0">Aktuell werden keine Text-Extraktionen
+						durchgeführt
+					</div>
+					<div *ngIf="progressTextExtraction.length > 0">
+						<div *ngFor="let detail of progressTextExtraction">
+							<div class="row">
+								<div class="col-md-4" [tooltip]="getTooltip(detail)">
+									{{detail.fileName}} ({{detail.page}}/{{detail.totalPages}})
+								</div>
+								<div class="col-md-7">
+									<div class="progress">
+										<div [class]="getProgressbarClass(detail)" role="progressbar"
+											 aria-valuenow="{{detail.percentage}}"
+											 aria-valuemin="0" aria-valuemax="100"
+											 style="width: {{detail.percentage}}%;">
+											{{detail.percentage}}%
+										</div>
+									</div>
+								</div>
+								<div class="col-md-1">
+									<button type="button" class="btn btn-default btn-sm"
+											(click)="removeItem(detail.detailId)">
+										<i class="glyphicon glyphicon-remove"></i>
+									</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<h3>Transformation</h3>
+					<div *ngIf="progressTransform.length === 0">Aktuell werden keine Transformationen durchgeführt</div>
+					<div *ngIf="progressTransform.length > 0">
+						<div *ngFor="let detail of progressTransform">
+							<div class="row">
+								<div class="col-md-4" [tooltip]="getTooltip(detail)">
+									{{detail.fileName}} ({{detail.page}}/{{detail.totalPages}})
+								</div>
+								<div class="col-md-7">
+									<div class="progress">
+										<div [class]="getProgressbarClass(detail)" role="progressbar"
+											 aria-valuenow="{{detail.percentage}}"
+											 aria-valuemin="0" aria-valuemax="100"
+											 style="width: {{detail.percentage}}%;">
+											{{detail.percentage}}%
+										</div>
+									</div>
+								</div>
+								<div class="col-md-1">
+									<button type="button" class="btn btn-default btn-sm"
+											(click)="removeItem(detail.detailId)">
+										<i class="glyphicon glyphicon-remove"></i>
+									</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</cmi-viaduc-layout-left-content>
+</div>
