@@ -1,28 +1,26 @@
-import {Component, HostListener, ViewEncapsulation} from '@angular/core';
+import {Component, HostListener, ViewChild, ViewEncapsulation} from '@angular/core';
 import {
-	ApproveStatus,
-	EntityDecoratorService,
+	Abbruchgrund,
 	ApplicationFeatureEnum,
+	ApproveStatus,
+	ArtDerArbeit,
+	ComponentCanDeactivate,
+	EntityDecoratorService,
+	EntscheidGesuchStatus,
+	GebrauchskopieStatus,
+	InternalStatus,
+	Reason,
 	ShippingType,
-	TranslationService,
-	Abbruchgrund, StammdatenService, ArtDerArbeit, Reason, EntscheidGesuchStatus, GebrauchskopieStatus
+	StammdatenService,
+	TranslationService
 } from '@cmi/viaduc-web-core';
-import {
-	AuthorizationService,
-	DetailPagingService,
-	ErrorService,
-	FileDownloadService,
-	UiService,
-	UrlService
-} from '../../../shared/services';
-import {
-	Bestellhistorie, OrderingFlatDetailItem, OrderingFlatItem,
-	StatusHistory
-} from '../../model';
+import {AuthorizationService, DetailPagingService, ErrorService, FileDownloadService, UiService, UrlService} from '../../../shared/services';
+import {Bestellhistorie, OrderingFlatDetailItem, OrderingFlatItem, StatusHistory} from '../../model';
 import {OrderService} from '../../services';
 import {ActivatedRoute} from '@angular/router';
 import * as moment from 'moment';
 import {ToastrService} from 'ngx-toastr';
+import {NgForm} from '@angular/forms';
 
 @Component({
 	selector: 'cmi-viaduc-orders-list-page',
@@ -30,7 +28,7 @@ import {ToastrService} from 'ngx-toastr';
 	encapsulation: ViewEncapsulation.None,
 	styleUrls: ['./ordersDetailPage.component.less']
 })
-export class OrdersDetailPageComponent {
+export class OrdersDetailPageComponent extends ComponentCanDeactivate {
 
 	public loading: boolean;
 	public crumbs: any[] = [];
@@ -54,6 +52,9 @@ export class OrdersDetailPageComponent {
 
 	private _recordId: number;
 
+	@ViewChild('formOrderDetail', {static: false})
+	public formOrderDetail: NgForm;
+
 	constructor(private _aut: AuthorizationService,
 				private _dec: EntityDecoratorService,
 				private _ord: OrderService,
@@ -67,6 +68,7 @@ export class OrdersDetailPageComponent {
 				private _txt: TranslationService,
 				private _route: ActivatedRoute) {
 
+		super();
 		this._route.params.subscribe(params => {
 			this._recordId = params['id'];
 			this._init();
@@ -91,6 +93,7 @@ export class OrdersDetailPageComponent {
 		this._ord.getOrderingDetail(this._recordId).subscribe(r => {
 			this.loading = false;
 			this.detailRecord = r;
+			this.formOrderDetail.resetForm();
 			this._buildCrumbs();
 			this._ord.getAuftragOrderingDetailFields().subscribe(fields => {
 				this.fieldInfos = fields;
@@ -188,8 +191,11 @@ export class OrdersDetailPageComponent {
 	}
 
 	public updateReason(val: number) {
-		this.detailRecord.reason = this.reasons.find(r => r.id === val).name;
-		this.detailRecord.reasonId = val;
+		// nach this.formOrderDetail.resetForm(); kommt ein nuller Wert
+		if (val !== null) {
+			this.detailRecord.reason = this.reasons.find(r => r.id === val).name;
+			this.detailRecord.reasonId = val;
+		}
 	}
 
 	public updatGebrauchskopieStatus(val: number) {
@@ -229,6 +235,10 @@ export class OrdersDetailPageComponent {
 			return info.isReadonly;
 		}
 		return true;
+	}
+
+	public canFieldAusleihdauerChange(): boolean	{
+		return this.detailRecord.status === InternalStatus.Ausgeliehen && !this.isFieldReadonly('ausleihdauer');
 	}
 
 	public showAushebungsAuftrag() {
@@ -331,6 +341,18 @@ export class OrdersDetailPageComponent {
 		});
 	}
 
+	public canDeactivate(): boolean {
+		return !this.formOrderDetail.dirty;
+	}
+
+	public promptForMessage(): false | 'question' | 'message' {
+		return  'question';
+	}
+
+	public message(): string {
+		return this._txt.get('hints.unsavedChanges', 'Sie haben ungespeicherte Änderungen. Wollen Sie die Seite tatsächlich verlassen?');
+	}
+
 	private verifyGebrauchskopieStatus(): boolean {
 		if (this.detailRecord && (this.detailRecord.gebrauchskopieStatus === GebrauchskopieStatus.NichtErstellt ||
 			this.detailRecord.gebrauchskopieStatus === GebrauchskopieStatus.Versendet)) {
@@ -366,6 +388,33 @@ export class OrdersDetailPageComponent {
 
 		if (this.isNavFixed) {
 			this.isNavFixed = false;
+		}
+	}
+
+	public getFormIsDirty():boolean {
+		if (this.formOrderDetail) {
+			return this.formOrderDetail.dirty;
+		}
+		return false;
+	}
+
+	public ausleihdauerChange(): void {
+		if (this.canFieldAusleihdauerChange()) {
+			const rueckgabe = moment(this?.detailRecord?.ausgabedatum);
+			this.detailRecord.erwartetesRueckgabeDatum = rueckgabe.add(this.detailRecord.ausleihdauer, 'days').toDate();
+		}
+	}
+
+	public erwartetesRueckgabeDatumChange(): void {
+		if (this.canFieldAusleihdauerChange()) {
+			let rueckgabe = moment(this?.detailRecord?.erwartetesRueckgabeDatum);
+			const ausgabe = moment(this?.detailRecord?.ausgabedatum);
+			// it has already deducted one day more
+			// if the order was after 0 o'clock
+			rueckgabe.add(ausgabe.hours(), 'hours');
+			rueckgabe.add(ausgabe.minute() + 1, 'minutes');
+
+			this.detailRecord.ausleihdauer = rueckgabe.diff(ausgabe, 'days') ;
 		}
 	}
 }

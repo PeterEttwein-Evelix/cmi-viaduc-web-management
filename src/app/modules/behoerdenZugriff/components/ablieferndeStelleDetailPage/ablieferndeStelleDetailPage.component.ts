@@ -1,13 +1,13 @@
 import {Component, OnInit, ViewChild} from '@angular/core';
 import {ActivatedRoute, Router} from '@angular/router';
-import {TranslationService, Utilities as _util} from '@cmi/viaduc-web-core';
+import {ComponentCanDeactivate, TranslationService, Utilities as _util} from '@cmi/viaduc-web-core';
 import {AblieferndeStelleService, UrlService, UiService} from '../../../shared/services';
 import {AblieferndeStelle} from '../../../shared/model/ablieferndeStelle';
 import {TokenService} from '../../services';
 import {AsToken} from '../../model/asToken';
 import {AblieferndeStelleToken} from '../../../shared/model/ablieferndeStelleToken';
 import {WjListBox} from '@grapecity/wijmo.angular2.input';
-import {FormControl, NgModel} from '@angular/forms';
+import {FormControl, NgForm, NgModel} from '@angular/forms';
 
 @Component({
 	selector: 'cmi-viaduc-ablieferndestelle-page-edit',
@@ -15,17 +15,7 @@ import {FormControl, NgModel} from '@angular/forms';
 	styleUrls: ['ablieferndeStelleDetailPage.component.less']
 })
 
-export class AblieferndeStelleDetailPageComponent implements OnInit {
-	public crumbs: any[] = [];
-	public ablieferndeStelleHeaderName: string;
-	public id: any;
-	public errors: string[];
-	public ablieferndeStelle: AblieferndeStelle;
-	public tokenList: AsToken;
-	public loading: boolean;
-	public selectedKontrollstelle = '';
-
-	private _mode: ModeD;
+export class AblieferndeStelleDetailPageComponent extends ComponentCanDeactivate implements OnInit {
 
 	@ViewChild('wjListbox', { static: false })
 	public wjListbox: WjListBox;
@@ -39,13 +29,24 @@ export class AblieferndeStelleDetailPageComponent implements OnInit {
 	@ViewChild('kuerzel', { static: false })
 	public kuerzel: NgModel;
 
-	public hasKontrollstelle: boolean = true;
+	@ViewChild('formStelleDetail', { static: false })
+	public formStelleDetail: NgForm;
 
+	public hasKontrollstelle: boolean = true;
 	public showDeleteModal: boolean = false;
 	public emailToDelete: string;
-
 	public saveClicked: boolean = false;
 	public showConfirmModal: boolean = false;
+	public crumbs: any[] = [];
+	public ablieferndeStelleHeaderName: string;
+	public id: any;
+	public errors: string[];
+	public ablieferndeStelle: AblieferndeStelle;
+	public tokenList: AsToken;
+	public loading: boolean;
+	public selectedKontrollstelle = '';
+
+	private _mode: ModeD;
 
 	constructor(private _ablieferndeStelleService: AblieferndeStelleService,
 				private _tokenService: TokenService,
@@ -54,6 +55,7 @@ export class AblieferndeStelleDetailPageComponent implements OnInit {
 				private _ui: UiService,
 				private _route: ActivatedRoute,
 				private _router: Router) {
+		super();
 	}
 
 	public ngOnInit(): void {
@@ -114,6 +116,18 @@ export class AblieferndeStelleDetailPageComponent implements OnInit {
 
 	public goToUserDetail(id: any): void {
 		this._router.navigate([this._url.getNormalizedUrl('/benutzerundrollen/benutzer') + '/' + id]);
+	}
+
+	public canDeactivate(): boolean {
+		return !this.formStelleDetail.dirty;
+	}
+
+	public promptForMessage(): false | 'question' | 'message' {
+		return 'question';
+	}
+
+	public message(): string {
+		return this._txt.get('hints.unsavedChanges', 'Sie haben ungespeicherte Änderungen. Wollen Sie die Seite tatsächlich verlassen?');
 	}
 
 	private _clearAndAddError(error: string): void {
@@ -180,7 +194,6 @@ export class AblieferndeStelleDetailPageComponent implements OnInit {
 		this._mode = this.id ? ModeD.Edit : ModeD.Add;
 
 		if (this._mode === ModeD.Add) {
-			console.log(id);
 			this.ablieferndeStelle = new AblieferndeStelle();
 			this.hasKontrollstelle = true;
 			this.ablieferndeStelleHeaderName = this._txt.get('behoerdenZugriff.detail.addablieferndestelleheader', 'Hinzufügen');

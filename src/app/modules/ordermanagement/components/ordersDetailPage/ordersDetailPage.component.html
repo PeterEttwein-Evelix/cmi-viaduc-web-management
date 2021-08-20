@@ -7,7 +7,8 @@
 			<cmi-viaduc-left-navigation></cmi-viaduc-left-navigation>
 		</div>
 		<div content>
-			<div class="page-content">
+			<form #formOrderDetail="ngForm">
+				<div class="page-content">
 				<div class="page-header">
 					<h2 class="page-content-title">
 						<span>{{'Auftragsdetail' | translate:'ordersDetailPage.title'}}</span>
@@ -57,7 +58,7 @@
 							</div>
 
 							<div class="col-lg-3 col-md-4 col-sm-5 col-xs-12 detail-paging" *ngIf="detailPagingEnabled">
-								<cmi-viaduc-detail-paging [detailUrl]="getDetailBaseUrl()" [idProperty]="'itemId'"></cmi-viaduc-detail-paging>
+								<cmi-viaduc-detail-paging [detailUrl]="getDetailBaseUrl()" [idProperty]="'itemId'" [disableNavigation]="getFormIsDirty()"></cmi-viaduc-detail-paging>
 							</div>
 
 							<div class="col-lg-9 col-md-8 col-sm-7">
@@ -637,9 +638,10 @@
 													   id="erwartetesRueckgabeDatum"
 													   [ngModel]="getDateAsString(detailRecord.erwartetesRueckgabeDatum)"
 													   (ngModelChange)="setStringAsDate($event, 'erwartetesRueckgabeDatum')"
+													   (change)="erwartetesRueckgabeDatumChange()"
+													   [disabled]="!canFieldAusleihdauerChange()"
 													   datePicker
-													   [minDateToday]="false"
-													   [disabled]="true">
+													   [minDateToday]="true">
 											</div>
 										</div>
 									</div>
@@ -650,10 +652,12 @@
 											</label>
 											<div class="col-md-9 col-xs-9">
 												<input class="form-control"
+													   type="number" min="1"
 													   name="ausleihdauer"
 													   id="ausleihdauer"
+													   (change)="ausleihdauerChange()"
 													   [(ngModel)]="detailRecord.ausleihdauer"
-													   [disabled]="isFieldReadonly('ausleihdauer')"
+													   [disabled]="!canFieldAusleihdauerChange()"
 													   required>
 											</div>
 										</div>
@@ -944,7 +948,8 @@
 																[(open)]="showEntscheidHinterlegen"
 																(onSubmitted)="reset()"
 																[datumBewilligung]="detailRecord.bewilligungsDatum"
-																[interneBemerkung]="detailRecord.internalComment">
+																[interneBemerkung]="detailRecord.internalComment"
+																[rolePublicClient]="detailRecord.rolePublicClient">
 							</cmi-viaduc-freigabekontrolle-modal>
 
 							<cmi-viaduc-auftraege-abschliessen-modal *ngIf="showAuftraegeAbschliessen"
@@ -987,7 +992,8 @@
 					</div>
 				</ng-template>
 
-			</div>
+				</div>
+			</form>
 		</div>
 	</cmi-viaduc-layout-left-content>
 </div>
@@ -1001,3 +1007,5 @@
 		</div>
 	</cmi-viaduc-modal-body>
 </cmi-viaduc-modal>
+
+<cmi-viaduc-modal-service-container></cmi-viaduc-modal-service-container>

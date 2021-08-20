@@ -1,10 +1,11 @@
-import {Component, OnInit} from '@angular/core';
+import {Component, OnInit, ViewChild} from '@angular/core';
 import {ActivatedRoute, Router} from '@angular/router';
-import {TranslationService} from '@cmi/viaduc-web-core';
+import { ComponentCanDeactivate, TranslationService} from '@cmi/viaduc-web-core';
 import {HttpErrorResponse} from '@angular/common/http';
 import {News} from '../../../modules/client/model';
 import {NewsService} from '../../../modules/client/services';
 import {UrlService} from '../../../modules/shared/services';
+import {NgForm} from '@angular/forms';
 
 @Component({
 	selector: 'cmi-news-management-details-page',
@@ -12,12 +13,17 @@ import {UrlService} from '../../../modules/shared/services';
 	styleUrls: ['./newsManagementDetailsPage.component.less']
 })
 
-export class NewsManagementDetailsPageComponent implements OnInit {
+export class NewsManagementDetailsPageComponent extends ComponentCanDeactivate implements OnInit {
+
+	@ViewChild('formNews', {static: false})
+	public formNews: NgForm;
+
 	public crumbs: any[] = [];
 	public id: string;
 	public pageHeader: string;
 	public news: News;
 	public errors: string[];
+
 	private _mode: Mode;
 	private _newsHasBeenChanged: boolean;
 
@@ -26,6 +32,7 @@ export class NewsManagementDetailsPageComponent implements OnInit {
 				private _url: UrlService,
 				private _route: ActivatedRoute,
 				private _router: Router) {
+		super();
 	}
 
 	public ngOnInit(): void {
@@ -63,6 +70,18 @@ export class NewsManagementDetailsPageComponent implements OnInit {
 
 	public get hasErrors(): boolean {
 		return this.errors && this.errors.length > 0;
+	}
+
+	public canDeactivate(): boolean {
+		return !this.formNews.dirty;
+	}
+
+	public promptForMessage(): false | 'question' | 'message' {
+		return  'question';
+	}
+
+	public message(): string {
+		return this._txt.get('hints.unsavedChanges', 'Sie haben ungespeicherte Änderungen. Wollen Sie die Seite tatsächlich verlassen?');
 	}
 
 	private _clearAndAddError(error: string): void {
@@ -127,6 +146,7 @@ export class NewsManagementDetailsPageComponent implements OnInit {
 	}
 
 	private _goToNews(): void {
+		this.formNews.resetForm();
 		this._router.navigate([this._url.getNormalizedUrl('kommunikation/news')]);
 	}
 
@@ -183,7 +203,7 @@ export class NewsManagementDetailsPageComponent implements OnInit {
 				this._newsHasBeenChanged = false;
 			},
 			(error) => {
-				console.log(error);
+				console.error(error);
 			});
 	}
 

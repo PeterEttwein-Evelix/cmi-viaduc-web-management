@@ -1,10 +1,10 @@
-import {Component, HostListener, ViewEncapsulation} from '@angular/core';
+import {Component, HostListener, ViewChild, ViewEncapsulation} from '@angular/core';
 import {
 	EntityDecoratorService,
 	TranslationService,
 	ApplicationFeatureEnum,
 	EntscheidGesuchStatus,
-	Abbruchgrund, StammdatenService, ArtDerArbeit, ShippingType, ApproveStatus
+	Abbruchgrund, StammdatenService, ArtDerArbeit, ShippingType, ApproveStatus, ComponentCanDeactivate
 } from '@cmi/viaduc-web-core';
 import {AuthorizationService, DetailPagingService, ErrorService, UrlService} from '../../../shared/services';
 import {Bestellhistorie, OrderingFlatDetailItem, OrderingFlatItem, StatusHistory} from '../../model';
@@ -12,6 +12,7 @@ import {OrderService} from '../../services';
 import {ActivatedRoute} from '@angular/router';
 import * as moment from 'moment';
 import {ToastrService} from 'ngx-toastr';
+import {NgForm} from '@angular/forms';
 
 @Component({
 	selector: 'cmi-viaduc-orders-einsichtsgesuche-detail-page',
@@ -19,7 +20,10 @@ import {ToastrService} from 'ngx-toastr';
 	encapsulation: ViewEncapsulation.None,
 	styleUrls: ['./ordersEinsichtDetailPage.component.less']
 })
-export class OrdersEinsichtDetailPageComponent {
+export class OrdersEinsichtDetailPageComponent  extends ComponentCanDeactivate {
+	@ViewChild('formEinsichtDetail', {static: false})
+	public formEinsichtDetail: NgForm;
+
 	public loading: boolean;
 	public crumbs: any[] = [];
 	public detailRecord: OrderingFlatDetailItem;
@@ -50,6 +54,7 @@ export class OrdersEinsichtDetailPageComponent {
 				private _err: ErrorService,
 				private _route: ActivatedRoute) {
 
+		super();
 		this._route.params.subscribe(params => {
 			this._recordId = params['id'];
 			this.init();
@@ -57,6 +62,23 @@ export class OrdersEinsichtDetailPageComponent {
 		this._stm.getArtDerArbeiten().subscribe((arbeiten) => {
 			this.artDerArbeiten = arbeiten;
 		});
+	}
+
+	@HostListener('window:scroll', ['$event'])
+	public onScroll(event) {
+		const verticalOffset = window.pageYOffset
+			|| document.documentElement.scrollTop
+			|| document.body.scrollTop || 0;
+
+		if (verticalOffset >= 222) {
+			// make nav fixed
+			this.isNavFixed = true;
+			return;
+		}
+
+		if (this.isNavFixed) {
+			this.isNavFixed = false;
+		}
 	}
 
 	public init(): void {
@@ -241,20 +263,22 @@ export class OrdersEinsichtDetailPageComponent {
 		this.showInVorlageExportieren = true;
 	}
 
-	@HostListener('window:scroll', ['$event'])
-	public onScroll(event) {
-		const verticalOffset = window.pageYOffset
-			|| document.documentElement.scrollTop
-			|| document.body.scrollTop || 0;
+	public canDeactivate(): boolean {
+		return !this.formEinsichtDetail.dirty;
+	}
 
-		if (verticalOffset >= 222) {
-			// make nav fixed
-			this.isNavFixed = true;
-			return;
-		}
+	public promptForMessage(): false | 'question' | 'message' {
+		return  'question';
+	}
 
-		if (this.isNavFixed) {
-			this.isNavFixed = false;
+	public message(): string {
+		return this._txt.get('hints.unsavedChanges', 'Sie haben ungespeicherte Änderungen. Wollen Sie die Seite tatsächlich verlassen?');
+	}
+
+	public getFormIsDirty():boolean {
+		if (this.formEinsichtDetail) {
+			return this.formEinsichtDetail.dirty;
 		}
+		return false;
 	}
 }

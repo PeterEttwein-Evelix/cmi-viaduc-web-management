@@ -44,8 +44,6 @@ export class UserService {
 		this.getUserSettings().then((settings) => {
 			if (settings) {
 				this._cfg.setSetting('user.settings', settings);
-				console.log('userService: saved Settings are:', settings, this._cfg.getSetting('user.settings'));
-
 				this._userSettingsLoaded = true;
 				this._isLoadingUserSettings = false;
 				this.userSettingsLoaded.next(true);

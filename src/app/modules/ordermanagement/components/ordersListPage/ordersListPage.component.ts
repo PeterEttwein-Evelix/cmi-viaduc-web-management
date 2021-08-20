@@ -36,14 +36,15 @@ export class OrdersListPageComponent implements OnInit {
 	public showEntscheidHinterlegen = false;
 	public showAuftraegeAbschliessen = false;
 	public selectedInternalComment: string;
+	public selectedrolePublicClient: string;
 	public selectedBewilligungsDate: Date;
 	public showAuftraegeAbbrechen = false;
 	public showAuftraegeZuruecksetzen = false;
 	public showAuftraegeAusleihen = false;
 	public showAuftraegeReponieren = false;
 	public showAuftraegeMahnungVersenden = false;
+	public showAuftraegeErinnerungVersenden = false;
 	public showBarCode = false;
-
 	public hasRight = false;
 
 	// @ts-ignore
@@ -120,12 +121,12 @@ export class OrdersListPageComponent implements OnInit {
 		});
 	}
 
-	public get selectedCount() {
-		return this.ordersList ? this.ordersList.selectedRowsCount : 0;
+	public get checkedCount() {
+		return this.ordersList ? this.ordersList.checkedRowsCount : 0;
 	}
 
-	public get selectedIds() {
-		return this.ordersList ? this.ordersList.selectedIds : [];
+	public get checkedIds() {
+		return this.ordersList?.checkedRowsCount ? this.ordersList.checkedRowsIds : [];
 	}
 
 	public listMenuItemClicked(menu: WjMenu) {
@@ -249,8 +250,8 @@ export class OrdersListPageComponent implements OnInit {
 		if (!this._err.verifyApplicationFeatureOrShowError(ApplicationFeatureEnum.AuftragsuebersichtAuftraegeKannAushebungsauftraegeDrucken)) {
 			return;
 		}
-		const selectedItemids = this.ordersList.selectedIds;
-		this._ord.getAushebungsAuftragHtml(selectedItemids).subscribe(html => {
+		const checkedItemids = this.ordersList.checkedRowsIds;
+		this._ord.getAushebungsAuftragHtml(checkedItemids).subscribe(html => {
 			this._ui.showHtmlInNewTab(html, this._txt.get('aushebungsauftrag', 'Aushebungsauftrag'));
 		});
 	}
@@ -259,9 +260,8 @@ export class OrdersListPageComponent implements OnInit {
 		if (!this._err.verifyApplicationFeatureOrShowError(ApplicationFeatureEnum.AuftragsuebersichtAuftraegeVersandkontrolleAusfuehren)) {
 			return;
 		}
-
-		const selectedItemids = this.ordersList.selectedIds;
-		this._ord.getVersandkontrolleHtml(selectedItemids).subscribe(html => {
+		const checkedItemids = this.ordersList.checkedRowsIds;
+		this._ord.getVersandkontrolleHtml(checkedItemids).subscribe(html => {
 			this._ui.showHtmlInNewTab(html, this._txt.get('versandkontrolle', 'Versandkontrolle'));
 		});
 	}
@@ -280,10 +280,10 @@ export class OrdersListPageComponent implements OnInit {
 		this.selectedBewilligungsDate = null;
 		this.selectedInternalComment = null;
 
-		if (this.ordersList.selectedIds.length > 0) {
-			const selectedItems = Array.from(this.ordersList.currentSelection.values());
+		if (this.ordersList.checkedRowsCount > 0) {
+			const checkedItems = Array.from(this.ordersList.currentChecked.values());
 
-			const bewilligungDates = selectedItems.map((i: OrderingFlatItem) => i.bewilligungsDatum);
+			const bewilligungDates = checkedItems.map((i: OrderingFlatItem) => i.bewilligungsDatum);
 			if (bewilligungDates && bewilligungDates.length > 0) {
 
 				if (bewilligungDates.length > 1) {
@@ -307,10 +307,10 @@ export class OrdersListPageComponent implements OnInit {
 				this.selectedBewilligungsDate = bewilligungDates[0];
 			}
 
-			const internalComments = selectedItems.map((i: OrderingFlatItem) => i.internalComment);
+			const internalComments = checkedItems.map((i: OrderingFlatItem) => i.internalComment);
 			if (internalComments && internalComments.length > 0) {
 				if (internalComments.length > 1) {
-					for (let c of internalComments)	{
+					for (let c of internalComments) {
 						if (c !== internalComments[0]) {
 							this._toastr.error('Ausgewählte Aufträge haben unterschiedliche interne Bemerkungen', 'Freigabekontrolle');
 							return;
@@ -321,6 +321,18 @@ export class OrdersListPageComponent implements OnInit {
 				this.selectedInternalComment = internalComments[0];
 			}
 
+			const rolePublicClients = checkedItems.map((i: OrderingFlatItem) => i.rolePublicClient);
+			if (rolePublicClients && rolePublicClients.length > 0) {
+				if (rolePublicClients.length > 1) {
+					const oe2Count = rolePublicClients.filter(r => r === 'Ö2').length;
+					if (oe2Count !== 0 && oe2Count !== rolePublicClients.length) {
+						this._toastr.error('Registrierte und identifizierte BenutzerInnen vorhanden.', 'Freigabekontrolle');
+						return;
+					}
+				}
+			}
+
+			this.selectedrolePublicClient = rolePublicClients[0];
 			this.showEntscheidHinterlegen = true;
 		}
 	}
@@ -370,10 +382,10 @@ export class OrdersListPageComponent implements OnInit {
 			return;
 		}
 
-		if (this.ordersList.selectedIds.length > 0) {
-			const selectedItems = Array.from(this.ordersList.currentSelection.values());
+		if (this.ordersList.checkedRowsCount > 0) {
+			const checkedItems = Array.from(this.ordersList.currentChecked.values());
 
-			const filtered = selectedItems.filter((i: OrderingFlatItem) =>
+			const filtered = checkedItems.filter((i: OrderingFlatItem) =>
 				i.status !== InternalStatus.Ausgeliehen ||
 				!(i.orderingType === ShippingType.Lesesaalausleihen || i.orderingType === ShippingType.Verwaltungsausleihe)
 			);
@@ -387,6 +399,29 @@ export class OrdersListPageComponent implements OnInit {
 		}
 
 		this.showAuftraegeMahnungVersenden = true;
+	}
+
+	public showErinnerungVersendenModal() {
+		if (!this._err.verifyApplicationFeatureOrShowError(ApplicationFeatureEnum.AuftragsuebersichtAuftraegeErinnerungVersenden)) {
+			return;
+		}
+
+		if (this.ordersList.checkedRowsCount > 0) {
+			const checkedItems = Array.from(this.ordersList.currentChecked.values());
+
+			const filtered = checkedItems.filter((i: OrderingFlatItem) =>
+				i.status !== InternalStatus.Ausgeliehen ||
+				i.orderingType !== ShippingType.Lesesaalausleihen);
+
+			if (filtered.length > 0) {
+				this._toastr.error(`Mindestens ein markierter Auftrag ist nicht vom Typ «Lesesaalausleihen»
+				und/oder er ist nicht im internen Status «Ausgeliehen». Der erste fehlerhafte Auftrag hat die ID ${filtered[0].itemId}`,
+					'Versand nicht erlaubt');
+				return;
+			}
+
+		this.showAuftraegeErinnerungVersenden = true;
+		}
 	}
 
 	public showBarCodeModal() {

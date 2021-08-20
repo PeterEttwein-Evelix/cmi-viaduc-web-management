@@ -15,9 +15,9 @@
             <div class="alert alert-info" role="alert">
                 <span class="icon icon--info"></span>
                 <span class="sr-only">info:</span> Die Newstexte unterstützen das <a href="https://www.markdownguide.org/basic-syntax/" target="_blank">Markdown - Format.</a>
-            </div>            
+            </div>
 
-            <form class="news-form">
+            <form #formNews="ngForm" class="news-form">
                 <fieldset>
                     <legend>Zeitraum</legend>
                     <div class="form-group">
@@ -188,6 +188,9 @@
                         translate:'communication.cancel'}}</button>
                 </fieldset>
             </form>
+
         </div>
     </cmi-viaduc-layout-left-content>
 </div>
+
+<cmi-viaduc-modal-service-container></cmi-viaduc-modal-service-container>

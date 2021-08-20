@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewChild, ChangeDetectorRef, AfterViewChecked } from '@angular/core';
 import {ActivatedRoute, Router} from '@angular/router';
 import {WjListBox} from '@grapecity//wijmo.angular2.input';
-import {ApplicationFeatureEnum, ClientContext, CountriesService, HttpService, TranslationService, Utilities as _util} from '@cmi/viaduc-web-core';
+import {ApplicationFeatureEnum, ClientContext, ComponentCanDeactivate, CountriesService, HttpService, TranslationService, Utilities as _util} from '@cmi/viaduc-web-core';
 import {
 	AblieferndeStelleService, AuthorizationService, DetailPagingService, ErrorService, UiService, UrlService,
 	UserService
@@ -11,20 +11,21 @@ import {RoleService} from '../../services';
 import * as fileSaver from 'file-saver';
 import {HttpEventType} from '@angular/common/http';
 import * as moment from 'moment';
+import {NgForm} from '@angular/forms';
 
 @Component({
 	selector: 'cmi-viaduc-user-roles-detail-page',
 	templateUrl: 'userRolesDetailPage.component.html',
 	styleUrls: ['./userRolesDetailPage.component.less']
 })
-export class UserRolesDetailPageComponent implements OnInit, AfterViewChecked {
+export class UserRolesDetailPageComponent extends ComponentCanDeactivate implements OnInit, AfterViewChecked {
 
 	public loading: boolean;
 
 	public crumbs: any[];
 	public detail: DetailResult<any>;
-
 	private _hasChanges: boolean;
+
 	public selectedRolepublic: string;
 	public preSelectedRolepublic: string;
 	public selectedResearcherGroup: boolean;
@@ -56,6 +57,8 @@ export class UserRolesDetailPageComponent implements OnInit, AfterViewChecked {
 	public listExcluded: WjListBox;
 	@ViewChild('listIncluded', { static: false })
 	public listIncluded: WjListBox;
+	@ViewChild('formUserDetail', {static: false})
+	public formUserDetail: NgForm;
 
 	public ablieferndeStelleAllList: AblieferndeStelle[];
 
@@ -70,6 +73,7 @@ export class UserRolesDetailPageComponent implements OnInit, AfterViewChecked {
 				private _dps: DetailPagingService,
 				private _errService: ErrorService,
 				private _changeDetectionRef: ChangeDetectorRef) {
+		super();
 	}
 
 	public ngOnInit(): void {
@@ -176,6 +180,8 @@ export class UserRolesDetailPageComponent implements OnInit, AfterViewChecked {
 	}
 
 	public goToBenutzerList(): void {
+		// BT Abbrechen
+		this.formUserDetail.resetForm();
 		this._router.navigate([this._url.getNormalizedUrl('/benutzerundrollen/benutzer')]);
 	}
 
@@ -223,10 +229,10 @@ export class UserRolesDetailPageComponent implements OnInit, AfterViewChecked {
 		this.selectedRolepublic = value;
 	}
 
-	public toggelSelectedResearcherGroup(): void {
+	public toggelSelectedResearcherGroup(e: MouseEvent): void {
 		if (this.selectedResearcherGroupOld === false) {
 			this.showVerifyModal = true;
-			event.preventDefault();
+			e.preventDefault();
 		}
 		this.selectedResearcherGroupOld = false;
 		this.selectedResearcherGroup = false;
@@ -417,7 +423,28 @@ export class UserRolesDetailPageComponent implements OnInit, AfterViewChecked {
 		return this._url.getBenutzerUebersichtUrl();
 	}
 
+	public canDeactivate(): boolean {
+		return !this.formUserDetail.dirty;
+	}
+
+	public promptForMessage(): false | 'question' | 'message' {
+		return  'question';
+	}
+
+	public message(): string {
+		return this._txt.get('hints.unsavedChanges', 'Sie haben ungespeicherte Änderungen. Wollen Sie die Seite tatsächlich verlassen?');
+	}
+
+	public getFormIsDirty():boolean {
+		if (this.formUserDetail) {
+			return this.formUserDetail.dirty;
+		}
+		return false;
+	}
+
 	private _reload(): void {
+		// Bt Zurücksetzen und Save
+		this.formUserDetail.resetForm();
 		this._load(this.detail.item.id);
 	}
 
